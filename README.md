@@ -1,6 +1,7 @@
 ---------------------------Sync Dash----------------
 
 *Objective
+
 Sync Dash is a simple hyper-casual game where the screen is divided into two halves:
 
 Right Side: The player controls their character.
