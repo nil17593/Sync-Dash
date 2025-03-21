@@ -4,30 +4,21 @@ using UnityEngine;
 
 public class PlatformController : MonoBehaviour
 {
-    public static PlatformController instance { get; private set; }
-    public Platform platformPrefab;   // Platform prefab to instantiate
-    public float platformLength = 25f;  // Length of each platform segment
-    public float minSpeed = 5f;         // Minimum speed of platform movement
-    public float maxSpeed = 15f;        // Maximum speed after acceleration
-    public int maxSegments = 10;        // Number of active platform segments
-    public float acceleration = 0.2f;   // How fast the speed increases over time
+    [SerializeField] private Platform platformPrefab;
+    [SerializeField] private float platformLength = 25f;
+    [SerializeField] private int maxSegments = 10;
+    [SerializeField] private Transform playerTransform;
+    private List<Platform> activePlatforms = new List<Platform>();
+    private Queue<Platform> platformPool = new Queue<Platform>();
 
-    private float currentSpeed;         // Current speed of platform movement
-    private List<Platform> activePlatforms = new List<Platform>();  // List of active platform segments
-    private Queue<Platform> platformPool = new Queue<Platform>();   // Object pool of platform segments
-    public Transform playerTransform;  // Reference to the player's transform
-
-    private float recycleDistance = -30f;   // Distance behind the player where platforms get recycled
-
-    void Awake()
+    private void OnEnable()
     {
-        instance = this;
+        EventManager.OnWorldReset += ResetWorld;
     }
 
     void Start()
     {
         InitializePlatformPool();
-        currentSpeed = minSpeed;
         SpawnInitialPlatforms();
     }
 
@@ -35,12 +26,10 @@ public class PlatformController : MonoBehaviour
     {
         if (GameManager.Instance.GameOver)
             return;
-        MovePlatforms();
-        HandleSpeedIncrease();
+
         RecycleOutOfViewPlatforms();
     }
 
-    // Initialize the platform pool
     void InitializePlatformPool()
     {
         for (int i = 0; i < maxSegments; i++)
@@ -51,7 +40,6 @@ public class PlatformController : MonoBehaviour
         }
     }
 
-    // Spawn the initial platforms
     void SpawnInitialPlatforms()
     {
         for (int i = 0; i < maxSegments; i++)
@@ -61,42 +49,27 @@ public class PlatformController : MonoBehaviour
         }
     }
 
-    // Move all active platforms backward relative to the player
-    void MovePlatforms()
+    // Reset the world by shifting platforms back based on the player's offset
+    public void ResetWorld(float offset)
     {
-        float movementDistance = currentSpeed * Time.deltaTime;
-
         foreach (Platform platform in activePlatforms)
         {
-            platform.transform.Translate(Vector3.back * movementDistance);
+            platform.transform.position -= new Vector3(0, 0, offset);  // Shift platforms backward by the player's reset distance
         }
     }
 
-    // Handle speed increase over time
-    void HandleSpeedIncrease()
-    {
-        if (currentSpeed < maxSpeed)
-        {
-            currentSpeed += acceleration * Time.deltaTime;
-        }
-    }
-
-    // Recycle platforms when they move behind the player
     void RecycleOutOfViewPlatforms()
     {
         if (activePlatforms.Count > 0)
         {
             Platform firstPlatform = activePlatforms[0];
-
-            // Check if the platform has moved behind the player
-            if (firstPlatform.transform.position.z < playerTransform.position.z + recycleDistance)
+            if (firstPlatform.transform.position.z < playerTransform.position.z - platformLength)
             {
                 RecyclePlatform();
             }
         }
     }
 
-    // Recycle the platform by moving it to the front
     void RecyclePlatform()
     {
         Platform oldPlatform = activePlatforms[0];
@@ -104,12 +77,10 @@ public class PlatformController : MonoBehaviour
         platformPool.Enqueue(oldPlatform);
         oldPlatform.gameObject.SetActive(false);
 
-        // Move the platform to the front
         Vector3 newPosition = activePlatforms[activePlatforms.Count - 1].transform.position + Vector3.forward * platformLength;
         SpawnPlatform(newPosition);
     }
 
-    // Spawn or reuse a platform from the pool
     void SpawnPlatform(Vector3 position)
     {
         Platform platform = platformPool.Dequeue();
@@ -119,8 +90,8 @@ public class PlatformController : MonoBehaviour
         activePlatforms.Add(platform);
     }
 
-    public float GetSpeedRatio()
+    private void OnDisable()
     {
-        return currentSpeed;
+        EventManager.OnWorldReset -= ResetWorld;
     }
 }

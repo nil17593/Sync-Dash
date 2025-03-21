@@ -1,16 +1,23 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class CubeController : MonoBehaviour
+public class Player : MonoBehaviour
 {
     [SerializeField] private float baseJumpHeight = 2.0f;
     [SerializeField] private float baseJumpDuration = 0.5f;
-    [SerializeField] private float gravityMultiplier = 2.5f;
+    [SerializeField] private ParticleSystem burstParticle;
     [SerializeField] private Transform groundCheck;
     [SerializeField] private float groundCheckRadius = 0.2f;
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private GhostController ghostController;
+    [SerializeField] private CubeController cubeController;
+    [SerializeField] private float currentSpeed;
+    [SerializeField] private float minSpeed = 5f;
+    [SerializeField] private float maxSpeed = 15f;
+    [SerializeField] private float acceleration = 0.2f;
 
-    private bool isGrounded;
-    private bool isJumping;
+    public bool isJumping;
     private float jumpStartTime;
     private float initialY;
     private float jumpDuration;
@@ -21,40 +28,46 @@ public class CubeController : MonoBehaviour
     {
         initialY = transform.position.y;
     }
-
-    void Update()
+    private void Update()
     {
-        // Check if the cube is grounded
-        isGrounded = Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer);
-
-        // Handle jump input (Spacebar or other input)
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !isJumping)
+        if (GameManager.Instance.GameOver)
+            return;
+        if (ISGrounded()  && Input.GetMouseButtonDown(0) && !isJumping)
         {
             StartJump();
+
+            if (ghostController != null)
+            {
+                ghostController.QueueJumpAction(jumpStartTime, jumpDuration);
+            }
         }
 
-        // Continue the jump if it's active
         if (isJumping)
         {
             ContinueJump();
         }
+
     }
 
-    void StartJump()
+
+    public void StartJump()
     {
         // Initialize jump variables
         isJumping = true;
         jumpStartTime = Time.time;
 
-        // Adjust jump timing based on platform speed
-        float speedRatio = PlatformController.instance.GetSpeedRatio() / PlatformController.instance.minSpeed;
+        float speedRatio = cubeController.GetCurrentSpeed() / minSpeed;
         jumpDuration = baseJumpDuration / speedRatio;
         jumpHeight = baseJumpHeight;
     }
 
+    bool ISGrounded()
+    {
+        return Physics.CheckSphere(groundCheck.position, groundCheckRadius, groundLayer); ;
+    }
+
     void ContinueJump()
     {
-        // Calculate the progress of the jump based on elapsed time
         float elapsedTime = Time.time - jumpStartTime;
         float jumpProgress = elapsedTime / jumpDuration;
 
@@ -65,22 +78,18 @@ public class CubeController : MonoBehaviour
         else
         {
             float verticalPosition;
-
             if (jumpProgress < 0.5f)
             {
-                // Rising part of the jump - use easeOutQuad for a quick initial rise
-                float riseProgress = jumpProgress * 2.0f; // Scale to 0-1 range
+                float riseProgress = jumpProgress * 2.0f;
                 verticalPosition = jumpHeight * (1 - (1 - riseProgress) * (1 - riseProgress));
             }
             else
             {
-                // Falling part of the jump - use easeInQuad with a multiplier for faster falling
-                float fallProgress = (jumpProgress - 0.5f) * 2.0f; // Scale to 0-1 range
-                fallProgress = Mathf.Min(fallProgress * fallMultiplier, 1.0f); // Apply fall multiplier
+                float fallProgress = (jumpProgress - 0.5f) * 2.0f;
+                fallProgress = Mathf.Min(fallProgress * fallMultiplier, 1.0f);
                 verticalPosition = jumpHeight * (1.0f - (fallProgress * fallProgress));
             }
 
-            // Update the position
             Vector3 currentPos = transform.position;
             transform.position = new Vector3(currentPos.x, initialY + verticalPosition, currentPos.z);
         }
@@ -90,27 +99,25 @@ public class CubeController : MonoBehaviour
     {
         isJumping = false;
 
-        // Make sure the cube ends at the correct height
         Vector3 currentPos = transform.position;
         transform.position = new Vector3(currentPos.x, initialY, currentPos.z);
     }
-
-    public ParticleSystem particle;
 
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag("Orb"))
         {
-            particle.Play();
+            burstParticle.Play();
+            burstParticle.transform.position = other.transform.position;
+            ScoreManager.Instance.AddCollectibleScore(5);
+            other.gameObject.SetActive(false);
         }
-        if (other.gameObject.CompareTag("Obstacle"))
+        if (other.gameObject.GetComponent<Obstacle>() != null)
         {
             GameManager.Instance.GameOver = true;
+            EventManager.TriggerGameOverEvent();
         }
     }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-       
-    }
 }
+
+
