@@ -1,25 +1,28 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 
-public class GameManager : Singletone<GameManager>
+namespace BattleBucks.SyncDash
 {
-    public float dist;
-    public float currentSpeed;
-    public bool GameOver;
-    protected override void Awake()
+    /// <summary>
+    /// this is GameManager class manages all game data
+    /// </summary>
+    public class GameManager : Singletone<GameManager>
     {
-        base.Awake();
-    }
+        public float dist;
+        public float currentSpeed;
+        public bool GameOver;
+        public float syncDelay;
+        protected override void Awake()
+        {
+            base.Awake();
+        }
 
-    public void RestartGame()
-    {
-        currentSpeed = 5;
-        GameOver = false;
+        public void RestartGame()
+        {
+            currentSpeed = 5;
+            syncDelay = 0.1f;
+            GameOver = false;
+        }
     }
 }
-
 
 
 

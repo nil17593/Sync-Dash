@@ -1,16 +1,25 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-public class MenuController : MonoBehaviour
-{
-    public void OnPlayButtonClicked()
-    {
-        SceneManager.LoadScene("GameScene");
-    }
 
-    public void OnQuitButtonClicked()
+namespace BattleBucks.SyncDash
+{
+    /// <summary>
+    /// Menu controller class which deal with user choices on main scene
+    /// </summary>
+    public class MenuController : MonoBehaviour
     {
-        Application.Quit();
+        private void Awake()
+        {
+            Application.targetFrameRate = 60;
+        }
+        public void OnPlayButtonClicked()
+        {
+            SceneManager.LoadScene("GameScene");
+        }
+
+        public void OnQuitButtonClicked()
+        {
+            Application.Quit();
+        }
     }
 }
